@@ -1,20 +1,21 @@
 # =============================================================================
-# MINIMAL SECURE DOCKERFILE - Amazon Linux 2023
-# =============================================================================
-# Prerequisites:
-#   1. Frontend already built and copied to src/main/resources/static
-#   2. Maven build already done: mvn clean package -DskipTests
-#   3. JAR file exists in target/
+# MULTI-STAGE DOCKERFILE - Amazon Linux 2023
 # =============================================================================
 
+# Stage 1: Build JAR
+FROM maven:3.9-amazoncorretto-17-al2023 AS build
+WORKDIR /app
+COPY pom.xml .
+RUN mvn dependency:go-offline -B
+COPY src ./src
+RUN mvn clean package -DskipTests -B
+
+# Stage 2: Run
 FROM public.ecr.aws/amazoncorretto/amazoncorretto:17-al2023-headless
-
 RUN dnf update -y && dnf clean all
 
-ENV APP_HOME=/app
-WORKDIR $APP_HOME
-
-COPY target/demo-0.0.1-SNAPSHOT.jar ./app.jar
+WORKDIR /app
+COPY --from=build /app/target/job-tracker-0.0.1-SNAPSHOT.jar ./app.jar
 
 EXPOSE 8080
 
